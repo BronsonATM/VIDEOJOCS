@@ -77,9 +77,9 @@ def main():
             print('Tu camello se ha muerto. Los touareg te pillan y te matan. Has perdido el juego.')
             input()
             done = True
-        if distancia_ladron-distancia_nativos <= 15:
+        if distancia_ladron - distancia_nativos <= 15:
             print('¡Los touareg se están acercando!')
-        elif distancia_ladron - distancia_nativos <=0:
+        if distancia_ladron - distancia_nativos <= 0:
             print('Te han pillado los touareg. Te matan. Has perdido.')
             input()
             done = True
