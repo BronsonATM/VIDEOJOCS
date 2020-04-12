@@ -55,6 +55,8 @@ class MyGame(arcade.Window):
         #Esconde el puntero
         self.set_mouse_visible(False)
 
+        self.sonido_Laser = arcade.load_sound("laser.ogg")
+
         arcade.set_background_color(arcade.color.AUBURN)
 
         self.emoji = emoji(300, 300, 0, 0, 10, arcade.color.YELLOW_GREEN, arcade.color.BLACK)
@@ -77,6 +79,8 @@ class MyGame(arcade.Window):
             self.emoji.change_y = MOVEMENT_SPEED
         elif key == arcade.key.DOWN:
             self.emoji.change_y = -MOVEMENT_SPEED
+        if key == arcade.key.SPACE:
+            arcade.play_sound(self.sonido_Laser)
 
     def on_key_release(self, key, modifiers):
         """ Called whenever a user releases a key. """
