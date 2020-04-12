@@ -1,3 +1,6 @@
-#!/usr/bin/python
+import arcade
 
-print ("Hello, world")
+arcade.open_window(300, 300, "Sound Demo")
+laser_sound = arcade.load_sound("laser.ogg")
+arcade.play_sound(laser_sound)
+arcade.run()
