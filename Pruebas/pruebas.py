@@ -1,45 +1,40 @@
 """
-Load a Tiled map file
-Artwork from: http://kenney.nl
-Tiled available from: http://www.mapeditor.org/
+This program shows how to:
+  * Have one or more instruction screens
+  * Show a 'Game over' text and halt the game
+  * Allow the user to restart the game
+
+
 If Python and Arcade are installed, this example can be run from the command line with:
-python -m arcade.examples.sprite_tiled_map
+python -m arcade.examples.instruction_and_game_over_screens
 """
 
 import arcade
+import random
 import os
-import time
 
-TILE_SCALING = 0.5
-PLAYER_SCALING = 1
+SPRITE_SCALING = 0.5
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
-SCREEN_TITLE = "Sprite Tiled Map Example"
-SPRITE_PIXEL_SIZE = 128
-GRID_PIXEL_SIZE = (SPRITE_PIXEL_SIZE * TILE_SCALING)
+SCREEN_TITLE = "Instruction and Game Over Screens Example"
 
-# How many pixels to keep as a minimum margin between the character
-# and the edge of the screen.
-VIEWPORT_MARGIN_TOP = 60
-VIEWPORT_MARGIN_BOTTOM = 60
-VIEWPORT_RIGHT_MARGIN = 270
-VIEWPORT_LEFT_MARGIN = 270
-
-# Physics
-MOVEMENT_SPEED = 5
-JUMP_SPEED = 23
-GRAVITY = 1.1
+# These numbers represent "states" that the game can be in.
+INSTRUCTIONS_PAGE_0 = 0
+INSTRUCTIONS_PAGE_1 = 1
+GAME_RUNNING = 2
+GAME_OVER = 3
 
 
 class MyGame(arcade.Window):
-    """ Main application class. """
+    """
+    Main application class.
+    """
 
-    def __init__(self):
-        """
-        Initializer
-        """
-        super().__init__(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
+    def __init__(self, screen_width, screen_height, title):
+        """ Constructor """
+        # Call the parent constructor. Required and must be the first line.
+        super().__init__(screen_width, screen_height, title)
 
         # Set the working directory (where we expect to find files) to the same
         # directory this .py file is in. You can leave this out of your own
@@ -48,8 +43,12 @@ class MyGame(arcade.Window):
         file_path = os.path.dirname(os.path.abspath(__file__))
         os.chdir(file_path)
 
-        # Sprite lists
-        self.wall_list = None
+        # Set the background color
+        arcade.set_background_color(arcade.color.AMAZON)
+
+        # Start 'state' will be showing the first page of instructions.
+        self.current_state = INSTRUCTIONS_PAGE_0
+
         self.player_list = None
         self.coin_list = None
 
@@ -57,173 +56,165 @@ class MyGame(arcade.Window):
         self.score = 0
         self.player_sprite = None
 
-        self.physics_engine = None
-        self.view_left = 0
-        self.view_bottom = 0
-        self.end_of_map = 0
-        self.game_over = False
-        self.last_time = None
-        self.frame_count = 0
-        self.fps_message = None
+        # STEP 1: Put each instruction page in an image. Make sure the image
+        # matches the dimensions of the window, or it will stretch and look
+        # ugly. You can also do something similar if you want a page between
+        # each level.
+        self.instructions = []
+        texture = arcade.load_texture("images/instructions_0.png")
+        self.instructions.append(texture)
+
+        texture = arcade.load_texture("images/instructions_1.png")
+        self.instructions.append(texture)
 
     def setup(self):
-        """ Set up the game and initialize the variables. """
-
+        """
+        Set up the game.
+        """
         # Sprite lists
         self.player_list = arcade.SpriteList()
         self.coin_list = arcade.SpriteList()
 
         # Set up the player
-        self.player_sprite = arcade.Sprite(":resources:images/animated_characters/female_person/femalePerson_idle.png",
-                                           PLAYER_SCALING)
-
-        # Starting position of the player
-        self.player_sprite.center_x = 196
-        self.player_sprite.center_y = 270
+        self.score = 0
+        self.player_sprite = arcade.Sprite("images/character.png", SPRITE_SCALING)
+        self.player_sprite.center_x = 50
+        self.player_sprite.center_y = 50
         self.player_list.append(self.player_sprite)
 
-        map_name = ":resources:/tmx_maps/map.tmx"
+        for i in range(50):
 
-        # Read in the tiled map
-        my_map = arcade.tilemap.read_tmx(map_name)
-        self.end_of_map = my_map.map_size.width * GRID_PIXEL_SIZE
+            # Create the coin instance
+            coin = arcade.Sprite("images/coin_01.png", SPRITE_SCALING / 3)
 
-        # --- Platforms ---
-        self.wall_list = arcade.tilemap.process_layer(my_map, 'Platforms', TILE_SCALING)
+            # Position the coin
+            coin.center_x = random.randrange(SCREEN_WIDTH)
+            coin.center_y = random.randrange(SCREEN_HEIGHT)
 
-        # --- Coins ---
-        self.coin_list = arcade.tilemap.process_layer(my_map, 'Coins', TILE_SCALING)
+            # Add the coin to the lists
+            self.coin_list.append(coin)
 
-        # --- Other stuff
-        # Set the background color
-        if my_map.background_color:
-            arcade.set_background_color(my_map.background_color)
+        # Don't show the mouse cursor
+        self.set_mouse_visible(False)
 
-        # Keep player from running through the wall_list layer
-        self.physics_engine = arcade.PhysicsEnginePlatformer(self.player_sprite,
-                                                             self.wall_list,
-                                                             gravity_constant=GRAVITY)
+    # STEP 2: Add this function.
+    def draw_instructions_page(self, page_number):
+        """
+        Draw an instruction page. Load the page as an image.
+        """
+        page_texture = self.instructions[page_number]
+        arcade.draw_texture_rectangle(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2,
+                                      page_texture.width,
+                                      page_texture.height, page_texture, 0)
 
-        # Set the view port boundaries
-        # These numbers set where we have 'scrolled' to.
-        self.view_left = 0
-        self.view_bottom = 0
 
-        self.game_over = False
+    # STEP 3: Add this function
+    def draw_game_over(self):
+        """
+        Draw "Game over" across the screen.
+        """
+        output = "Game Over"
+        arcade.draw_text(output, 240, 400, arcade.color.WHITE, 54)
 
+        output = "Click to restart"
+        arcade.draw_text(output, 310, 300, arcade.color.WHITE, 24)
+
+    # STEP 4: Take the drawing code you currently have in your
+    # on_draw method AFTER the start_render call and MOVE to a new
+    # method called draw_game.
+    def draw_game(self):
+        """
+        Draw all the sprites, along with the score.
+        """
+        # Draw all the sprites.
+        self.player_list.draw()
+        self.coin_list.draw()
+
+        # Put the text on the screen.
+        output = f"Score: {self.score}"
+        arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
+
+    # STEP 5: Update the on_draw function to look like this. Adjust according
+    # to the number of instruction pages you have.
     def on_draw(self):
         """
         Render the screen.
         """
 
-        self.frame_count += 1
-
         # This command has to happen before we start drawing
         arcade.start_render()
 
-        # Draw all the sprites.
-        self.player_list.draw()
-        self.wall_list.draw()
-        self.coin_list.draw()
+        if self.current_state == INSTRUCTIONS_PAGE_0:
+            self.draw_instructions_page(0)
 
-        if self.last_time and self.frame_count % 60 == 0:
-            fps = 1.0 / (time.time() - self.last_time) * 60
-            self.fps_message = f"FPS: {fps:5.0f}"
+        elif self.current_state == INSTRUCTIONS_PAGE_1:
+            self.draw_instructions_page(1)
 
-        if self.fps_message:
-            arcade.draw_text(self.fps_message, self.view_left + 10, self.view_bottom + 40, arcade.color.BLACK, 14)
+        elif self.current_state == GAME_RUNNING:
+            self.draw_game()
 
-        if self.frame_count % 60 == 0:
-            self.last_time = time.time()
+        else:
+            self.draw_game()
+            self.draw_game_over()
 
-        # Put the text on the screen.
-        # Adjust the text position based on the view port so that we don't
-        # scroll the text too.
-        distance = self.player_sprite.right
-        output = f"Distance: {distance}"
-        arcade.draw_text(output, self.view_left + 10, self.view_bottom + 20, arcade.color.BLACK, 14)
-
-        if self.game_over:
-            arcade.draw_text("Game Over", self.view_left + 200, self.view_bottom + 200, arcade.color.BLACK, 30)
-
-    def on_key_press(self, key, modifiers):
-        """
-        Called whenever the mouse moves.
-        """
-        if key == arcade.key.UP:
-            if self.physics_engine.can_jump():
-                self.player_sprite.change_y = JUMP_SPEED
-        elif key == arcade.key.LEFT:
-            self.player_sprite.change_x = -MOVEMENT_SPEED
-        elif key == arcade.key.RIGHT:
-            self.player_sprite.change_x = MOVEMENT_SPEED
-
-    def on_key_release(self, key, modifiers):
+    # STEP 6: Do something like adding this to your on_mouse_press to flip
+    # between instruction pages.
+    def on_mouse_press(self, x, y, button, modifiers):
         """
         Called when the user presses a mouse button.
         """
-        if key == arcade.key.LEFT or key == arcade.key.RIGHT:
-            self.player_sprite.change_x = 0
 
-    def on_update(self, delta_time):
+        # Change states as needed.
+        if self.current_state == INSTRUCTIONS_PAGE_0:
+            # Next page of instructions.
+            self.current_state = INSTRUCTIONS_PAGE_1
+        elif self.current_state == INSTRUCTIONS_PAGE_1:
+            # Start the game
+            self.setup()
+            self.current_state = GAME_RUNNING
+        elif self.current_state == GAME_OVER:
+            # Restart the game.
+            self.setup()
+            self.current_state = GAME_RUNNING
+
+    def on_mouse_motion(self, x, y, dx, dy):
+        """
+        Called whenever the mouse moves.
+        """
+        # Only move the user if the game is running.
+        if self.current_state == GAME_RUNNING:
+            self.player_sprite.center_x = x
+            self.player_sprite.center_y = y
+
+    # STEP 7: Only update if the game state is GAME_RUNNING like below:
+    def update(self, delta_time):
         """ Movement and game logic """
 
-        if self.player_sprite.right >= self.end_of_map:
-            self.game_over = True
+        # Only move and do things if the game is running.
+        if self.current_state == GAME_RUNNING:
+            # Call update on all sprites (The sprites don't do much in this
+            # example though.)
+            self.coin_list.update()
+            self.player_list.update()
 
-        # Call update on all sprites (The sprites don't do much in this
-        # example though.)
-        if not self.game_over:
-            self.physics_engine.update()
+            # Generate a list of all sprites that collided with the player.
+            hit_list = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
 
-        coins_hit = arcade.check_for_collision_with_list(self.player_sprite, self.coin_list)
-        for coin in coins_hit:
-            coin.remove_from_sprite_lists()
-            self.score += 1
+            # Loop through each colliding sprite, remove it, and add to the
+            # score.
+            for coin in hit_list:
+                coin.kill()
+                self.score += 1
 
-        # --- Manage Scrolling ---
-
-        # Track if we need to change the view port
-
-        changed = False
-
-        # Scroll left
-        left_bndry = self.view_left + VIEWPORT_LEFT_MARGIN
-        if self.player_sprite.left < left_bndry:
-            self.view_left -= left_bndry - self.player_sprite.left
-            changed = True
-
-        # Scroll right
-        right_bndry = self.view_left + SCREEN_WIDTH - VIEWPORT_RIGHT_MARGIN
-        if self.player_sprite.right > right_bndry:
-            self.view_left += self.player_sprite.right - right_bndry
-            changed = True
-
-        # Scroll up
-        top_bndry = self.view_bottom + SCREEN_HEIGHT - VIEWPORT_MARGIN_TOP
-        if self.player_sprite.top > top_bndry:
-            self.view_bottom += self.player_sprite.top - top_bndry
-            changed = True
-
-        # Scroll down
-        bottom_bndry = self.view_bottom + VIEWPORT_MARGIN_BOTTOM
-        if self.player_sprite.bottom < bottom_bndry:
-            self.view_bottom -= bottom_bndry - self.player_sprite.bottom
-            changed = True
-
-        # If we need to scroll, go ahead and do it.
-        if changed:
-            self.view_left = int(self.view_left)
-            self.view_bottom = int(self.view_bottom)
-            arcade.set_viewport(self.view_left,
-                                SCREEN_WIDTH + self.view_left,
-                                self.view_bottom,
-                                SCREEN_HEIGHT + self.view_bottom)
+            # If we've collected all the games, then move to a "GAME_OVER"
+            # state.
+            if len(self.coin_list) == 0:
+                self.current_state = GAME_OVER
+                self.set_mouse_visible(True)
 
 
 def main():
-    window = MyGame()
-    window.setup()
+    MyGame(SCREEN_WIDTH, SCREEN_HEIGHT, SCREEN_TITLE)
     arcade.run()
 
 

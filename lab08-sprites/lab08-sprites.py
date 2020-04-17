@@ -4,14 +4,72 @@ import random
 import arcade
 
 # --- Constants ---
-SPRITE_SCALING_PLAYER = 0.2
+SPRITE_SCALING_PLAYER = 0.10
 SPRITE_SCALING_COIN = 0.08
-SPRITE_SCALIN_RAMOS = 0.2
-COIN_COUNT = 15
-RAMOS_COUNT = 10
+SPRITE_SCALING_RAMOS = 0.25
+COIN_COUNT = 2
+RAMOS_COUNT = 20
 
 SCREEN_WIDTH = 800
 SCREEN_HEIGHT = 600
+
+
+class Coin(arcade.Sprite):
+
+    def __init__(self, filename, sprite_scaling):
+
+        super().__init__(filename, sprite_scaling)
+
+        self.change_x = 0
+        self.change_y = 0
+
+    def update(self):
+
+        # Move the coin
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+        # If we are out-of-bounds, then 'bounce'
+        if self.left < 0:
+            self.change_x *= -1
+
+        if self.right > SCREEN_WIDTH:
+            self.change_x *= -1
+
+        if self.bottom < 0:
+            self.change_y *= -1
+
+        if self.top > SCREEN_HEIGHT:
+            self.change_y *= -1
+
+class Ramos(arcade.Sprite):
+
+    def __init__(self, filename, sprite_scaling):
+
+        super().__init__(filename, sprite_scaling)
+
+        self.change_x = 0
+        self.change_y = 0
+
+    def update(self):
+
+        # Move the coin
+        self.center_x += self.change_x
+        self.center_y += self.change_y
+
+        # If we are out-of-bounds, then 'bounce'
+        if self.left < 0:
+            self.change_x *= -1
+
+        if self.right > SCREEN_WIDTH:
+            self.change_x *= -1
+
+        if self.bottom < 0:
+            self.change_y *= -1
+
+        if self.top > SCREEN_HEIGHT:
+            self.change_y *= -1
+
 
 
 class MyGame(arcade.Window):
@@ -31,13 +89,16 @@ class MyGame(arcade.Window):
         self.player_sprite = None
         self.score = 0
 
-        # MDHP
-        self.sonido_bueno = arcade.load_sound("MHDP.mp3")
-
         # Don't show the mouse cursor
         self.set_mouse_visible(False)
 
+        self.sonido_Bueno = arcade.load_sound("MHDP.mp3")
+
+        final = f"GAME OVER"
+
         arcade.set_background_color(arcade.color.AMAZON)
+
+
 
     def setup(self):
         """ Set up the game and initialize the variables. """
@@ -52,7 +113,7 @@ class MyGame(arcade.Window):
 
         # Set up the player
         # Character image from kenney.nl
-        self.player_sprite = arcade.Sprite("Atletico_Madrid.png", SPRITE_SCALING_PLAYER)
+        self.player_sprite = arcade.Sprite("../Pruebas/Atletico_Madrid.png", SPRITE_SCALING_PLAYER)
         self.player_sprite.center_x = 50
         self.player_sprite.center_y = 50
         self.player_list.append(self.player_sprite)
@@ -62,21 +123,28 @@ class MyGame(arcade.Window):
 
             # Create the coin instance
             # Coin image from kenney.nl
-            coin = arcade.Sprite("jasid.png", SPRITE_SCALING_COIN)
+            coin = Coin("../Pruebas/jasid.png", SPRITE_SCALING_COIN)
 
             # Position the coin
             coin.center_x = random.randrange(SCREEN_WIDTH)
             coin.center_y = random.randrange(SCREEN_HEIGHT)
+            coin.change_x = random.randrange(-3, 4)
+            coin.change_y = random.randrange(-3, 4)
 
             # Add the coin to the lists
             self.coin_list.append(coin)
 
-        # Crear al malévolo Sergio Ramos
         for i in range(RAMOS_COUNT):
-            ramos = arcade.Sprite("cerdo.png", SPRITE_SCALIN_RAMOS)
+            ramos = Ramos("../Pruebas/cerdo.png",SPRITE_SCALING_RAMOS)
+
             ramos.center_x = random.randrange(SCREEN_WIDTH)
             ramos.center_y = random.randrange(SCREEN_HEIGHT)
+            ramos.change_x = random.randrange(-3,4)
+            ramos.change_y = random.randrange(-3,4)
+
             self.ramos_list.append(ramos)
+
+
 
 
     def on_draw(self):
@@ -90,33 +158,41 @@ class MyGame(arcade.Window):
         output = f"Score: {self.score}"
         arcade.draw_text(output, 10, 20, arcade.color.WHITE, 14)
 
+        if len(self.coin_list)==0:
+            final = "GAME OVER"
+            arcade.draw_text(final, 150, 250, arcade.color.WHITE, 75)
+
+
+
     def on_mouse_motion(self, x, y, dx, dy):
         """ Handle Mouse Motion """
 
         # Move the center of the player sprite to match the mouse x, y
-        self.player_sprite.center_x = x
-        self.player_sprite.center_y = y
+        if len(self.coin_list)>0:
+            self.player_sprite.center_x = x
+            self.player_sprite.center_y = y
 
     def update(self, delta_time):
         """ Movement and game logic """
 
         # Call update on all sprites (The sprites don't do much in this
         # example though.)
-        self.coin_list.update()
+        if len(self.coin_list)>0:
+            self.coin_list.update()
+            self.ramos_list.update()
 
         # Generate a list of all sprites that collided with the player.
-        coins_hit_list = arcade.check_for_collision_with_list(self.player_sprite,
-                                                              self.coin_list)
+        hit_list = arcade.check_for_collision_with_list(self.player_sprite,
+                                                        self.coin_list)
 
-        ramos_hit_list = arcade.check_for_collision_with_list(self.player_sprite,self.ramos_list)
+        hit_list_2 = arcade.check_for_collision_with_list(self.player_sprite,self.ramos_list)
 
         # Loop through each colliding sprite, remove it, and add to the score.
-        for coin in coins_hit_list:
+        for coin in hit_list:
             coin.remove_from_sprite_lists()
             self.score += 1
-            arcade.play_sound(self.sonido_bueno)
 
-        for ramos in ramos_hit_list:
+        for ramos in hit_list_2:
             ramos.remove_from_sprite_lists()
             self.score -= 1
 
@@ -127,6 +203,9 @@ def main():
     window = MyGame()
     window.setup()
     arcade.run()
+
+
+
 
 
 if __name__ == "__main__":
